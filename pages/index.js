@@ -3,17 +3,16 @@ import jsPDF from "jspdf";
 
 export default function Home() {
   const [destination, setDestination] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const [tripDate, setTripDate] = useState(""); // single date
   const [travelers, setTravelers] = useState("2");
 
-  const [budgetLevel, setBudgetLevel] = useState(1000); // slider value
-  const [budget, setBudget] = useState("medium"); // label we send to API
+  const [budgetLevel, setBudgetLevel] = useState(1000);
+  const [budget, setBudget] = useState("medium");
 
   const [pace, setPace] = useState("normal");
   const [durationDays, setDurationDays] = useState(7);
 
-  const [interests, setInterests] = useState([]);
+  const [interests, setInterests] = useState([]); // optional
   const [notes, setNotes] = useState("");
 
   const [loading, setLoading] = useState(false);
@@ -21,13 +20,24 @@ export default function Home() {
   const [result, setResult] = useState(null);
   const [showResultCard, setShowResultCard] = useState(false);
 
+  // Expanded interest options, including kids/teens/seniors/clubs/pubs
   const interestOptions = [
-    "Sightseeing",
+    "Sightseeing & Landmarks",
     "Food & Cafes",
-    "Nightlife",
+    "Fine Dining",
+    "Shopping & Malls",
     "Nature & Hiking",
+    "Beaches & Relaxation",
     "Museums & Culture",
-    "Shopping",
+    "Family-friendly / Kids",
+    "Theme Parks & Attractions",
+    "Teen-friendly Hangouts",
+    "Senior-friendly / Low Walking",
+    "Spa & Wellness",
+    "Adventure Sports",
+    "Clubs & Nightlife",
+    "Pubs & Bars",
+    "Religious / Spiritual Sites",
   ];
 
   const paceOptions = [
@@ -37,20 +47,14 @@ export default function Home() {
     { value: "intense", label: "Intense" },
   ];
 
-  const toggleInterest = (item) => {
-    setInterests((prev) =>
-      prev.includes(item) ? prev.filter((i) => i !== item) : [...prev, item]
-    );
-  };
-
   async function handleSubmit(e) {
-    e.preventDefault();
+    if (e) e.preventDefault();
     setError("");
     setResult(null);
-    setShowResultCard(true); // make the itinerary card pop up immediately
+    setShowResultCard(true);
 
-    if (!destination || !startDate || !endDate) {
-      setError("Please enter destination and dates.");
+    if (!destination || !tripDate) {
+      setError("Please enter destination and trip date.");
       setLoading(false);
       return;
     }
@@ -63,8 +67,7 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           destination,
-          startDate,
-          endDate,
+          tripDate,
           travelers,
           budget,
           budgetValue: budgetLevel,
@@ -94,21 +97,22 @@ export default function Home() {
     if (!result?.itinerary) return;
 
     const titleDestination = destination || "Your Trip";
-    const dateRange =
-      startDate && endDate ? `${startDate} → ${endDate}` : "Dates not set";
+    const dateLine = tripDate
+      ? `${tripDate} (around ${durationDays} days)`
+      : `Around ${durationDays} days`;
 
     const doc = new jsPDF("p", "pt", "a4");
     const marginLeft = 40;
     const marginTop = 50;
-    const maxWidth = 515; // A4 width - margins
+    const maxWidth = 515;
 
     doc.setFontSize(16);
     doc.text(`TripPlanBuddy Itinerary`, marginLeft, marginTop);
     doc.setFontSize(12);
     doc.text(`Destination: ${titleDestination}`, marginLeft, marginTop + 20);
-    doc.text(`Dates: ${dateRange}`, marginLeft, marginTop + 36);
+    doc.text(`Trip date & duration: ${dateLine}`, marginLeft, marginTop + 36);
     doc.text(
-      `Travelers: ${travelers || "N/A"}  •  Pace: ${pace}  •  Duration: ${durationDays} days`,
+      `Travelers: ${travelers || "N/A"}  •  Pace: ${pace}`,
       marginLeft,
       marginTop + 52
     );
@@ -135,9 +139,10 @@ export default function Home() {
   const cardStyle = {
     backgroundColor: "#ffffff",
     borderRadius: 16,
-    padding: 18,
+    padding: 20,
     border: "1px solid #e1e1e1",
     boxShadow: "0 8px 26px rgba(0,0,0,0.03)",
+    boxSizing: "border-box",
   };
 
   const labelStyle = {
@@ -156,100 +161,36 @@ export default function Home() {
     color: "#000000",
     fontSize: 13,
     outline: "none",
+    boxSizing: "border-box",
   };
 
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        justifyContent: "center",
-        padding: "32px 16px",
-        boxSizing: "border-box",
-        background:
-          "radial-gradient(circle at top left, #f5f5f5, #e9e9e9, #f5f5f5)",
-        color: "#111111",
-        fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
-      }}
-    >
-      <div style={{ width: "100%", maxWidth: 1120 }}>
+    <main className="page-root">
+      <div className="page-wrapper">
         {/* Header */}
-        <header
-          style={{
-            marginBottom: 24,
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            gap: 16,
-          }}
-        >
+        <header className="header">
           <div>
-            <h1
-              style={{
-                fontSize: 28,
-                fontWeight: 700,
-                color: "#000000",
-                marginBottom: 4,
-              }}
-            >
-              TripPlanBuddy
-            </h1>
-            <p
-              style={{
-                fontSize: 14,
-                color: "#444444",
-                maxWidth: 650,
-                lineHeight: 1.5,
-              }}
-            >
+            <h1 className="title">TripPlanBuddy</h1>
+            <p className="subtitle">
               Plan your trip in seconds. Set your basics, choose your pace and
               budget, tell TripPlanBuddy what you really want, and get a
               day-by-day itinerary you can download as a PDF.
             </p>
           </div>
 
-          <span
-            style={{
-              fontSize: 11,
-              padding: "5px 10px",
-              borderRadius: 999,
-              border: "1px solid #000000",
-              backgroundColor: "#ffffff",
-            }}
-          >
-            Powered by AI itineraries
-          </span>
+          <span className="pill">Powered by AI itineraries</span>
         </header>
 
         {/* Main grid */}
-        <div
-          style={{
-            display: "grid",
-            gap: 20,
-            gridTemplateColumns: "minmax(0, 1.1fr) minmax(0, 1.3fr)",
-            alignItems: "flex-start",
-          }}
-        >
+        <div className="layout-grid">
           {/* LEFT COLUMN */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            {/* Trip basics card */}
+          <div className="left-column">
+            {/* Trip basics */}
             <section style={cardStyle}>
-              <h2
-                style={{
-                  marginBottom: 10,
-                  fontSize: 15,
-                  fontWeight: 600,
-                  color: "#111111",
-                }}
-              >
-                Trip basics
-              </h2>
+              <h2 className="card-title">Trip basics</h2>
 
-              <form
-                onSubmit={handleSubmit}
-                style={{ display: "flex", flexDirection: "column", gap: 12 }}
-              >
-                <div>
+              <div className="card-body">
+                <div className="field">
                   <label style={labelStyle}>Destination</label>
                   <input
                     placeholder="Tokyo, Paris, Bali..."
@@ -259,34 +200,17 @@ export default function Home() {
                   />
                 </div>
 
-                <div
-                  style={{
-                    display: "grid",
-                    gap: 10,
-                    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-                  }}
-                >
-                  <div>
-                    <label style={labelStyle}>Start date</label>
-                    <input
-                      type="date"
-                      value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
-                      style={inputStyle}
-                    />
-                  </div>
-                  <div>
-                    <label style={labelStyle}>End date</label>
-                    <input
-                      type="date"
-                      value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
-                      style={inputStyle}
-                    />
-                  </div>
+                <div className="field">
+                  <label style={labelStyle}>When are you planning to go?</label>
+                  <input
+                    type="date"
+                    value={tripDate}
+                    onChange={(e) => setTripDate(e.target.value)}
+                    style={inputStyle}
+                  />
                 </div>
 
-                <div>
+                <div className="field">
                   <label style={labelStyle}>Number of travelers</label>
                   <input
                     type="number"
@@ -297,298 +221,170 @@ export default function Home() {
                   />
                 </div>
 
-                <div>
-                  <label style={labelStyle}>Interests</label>
-                  <div
-                    style={{
-                      display: "flex",
-                      flexWrap: "wrap",
-                      gap: 6,
+                <div className="field">
+                  <label style={labelStyle}>
+                    Interests (optional – choose one or more)
+                  </label>
+                  <select
+                    multiple
+                    value={interests}
+                    onChange={(e) => {
+                      const selected = Array.from(
+                        e.target.selectedOptions
+                      ).map((o) => o.value);
+                      setInterests(selected);
                     }}
+                    style={{ ...inputStyle, height: 110 }}
                   >
-                    {interestOptions.map((item) => {
-                      const active = interests.includes(item);
+                    {interestOptions.map((item) => (
+                      <option key={item} value={item}>
+                        {item}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="hint">
+                    Tip: Hold <strong>Ctrl</strong> (Windows) or{" "}
+                    <strong>Cmd</strong> (Mac) to select multiple interests.
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* Trip style & notes */}
+            <section style={cardStyle}>
+              <h2 className="card-title">Trip style &amp; notes</h2>
+
+              <div className="card-body">
+                {/* Pace */}
+                <div className="field">
+                  <div className="field-label">Pace level</div>
+                  <div className="pace-row">
+                    {paceOptions.map((p) => {
+                      const active = pace === p.value;
                       return (
                         <button
+                          key={p.value}
                           type="button"
-                          key={item}
-                          onClick={() => toggleInterest(item)}
-                          style={{
-                            padding: "4px 10px",
-                            borderRadius: 999,
-                            border: "1px solid #000000",
-                            fontSize: 11,
-                            cursor: "pointer",
-                            backgroundColor: active ? "#000000" : "#ffffff",
-                            color: active ? "#ffffff" : "#000000",
-                          }}
+                          onClick={() => setPace(p.value)}
+                          className={`pace-chip ${
+                            active ? "pace-chip--active" : ""
+                          }`}
                         >
-                          {item}
+                          {p.label}
                         </button>
                       );
                     })}
                   </div>
                 </div>
 
-                {/* We keep the submit button in the second card (Trip style),
-                    so here we just close the form – but we need the form
-                    wrapper for enter-key, so Trip style section will use
-                    the same handleSubmit. */}
-              </form>
-            </section>
-
-            {/* Trip style card (pace, budget slider, duration slider, notes, button) */}
-            <section style={cardStyle}>
-              <h2
-                style={{
-                  marginBottom: 12,
-                  fontSize: 15,
-                  fontWeight: 600,
-                  color: "#111111",
-                }}
-              >
-                Trip style & notes
-              </h2>
-
-              {/* Pace level */}
-              <div style={{ marginBottom: 16 }}>
-                <div
-                  style={{
-                    fontSize: 13,
-                    marginBottom: 8,
-                    color: "#222222",
-                  }}
-                >
-                  Pace level
+                {/* Budget slider – up to 100k */}
+                <div className="field">
+                  <div className="field-label-row">
+                    <span>Budget level (all inclusive)</span>
+                    <span className="muted">
+                      Approx: ${budgetLevel.toLocaleString()}
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={500}
+                    max={100000}
+                    step={500}
+                    value={budgetLevel}
+                    onChange={(e) => setBudgetLevel(Number(e.target.value))}
+                    className="slider"
+                  />
+                  <div className="hint">
+                    Drag to match your rough total budget (up to $100,000).
+                  </div>
                 </div>
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-                    gap: 8,
-                  }}
-                >
-                  {paceOptions.map((p) => {
-                    const active = pace === p.value;
-                    return (
-                      <button
-                        key={p.value}
-                        type="button"
-                        onClick={() => setPace(p.value)}
-                        style={{
-                          padding: "10px 6px",
-                          borderRadius: 12,
-                          border: active
-                            ? "2px solid #000000"
-                            : "1px solid #d6d6d6",
-                          backgroundColor: active ? "#000000" : "#f8f8f8",
-                          color: active ? "#ffffff" : "#111111",
-                          fontSize: 12,
-                          cursor: "pointer",
-                        }}
-                      >
-                        {p.label}
-                      </button>
-                    );
-                  })}
+
+                {/* Duration slider */}
+                <div className="field">
+                  <div className="field-label-row">
+                    <span>Duration</span>
+                    <span className="muted">
+                      {durationDays} {durationDays === 1 ? "day" : "days"}
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={1}
+                    max={30}
+                    value={durationDays}
+                    onChange={(e) =>
+                      setDurationDays(Number(e.target.value))
+                    }
+                    className="slider"
+                  />
                 </div>
+
+                {/* Notes */}
+                <div className="field">
+                  <label style={labelStyle}>
+                    Tell TripPlanBuddy what you really want
+                  </label>
+                  <textarea
+                    placeholder="It's our honeymoon, I want to surprise my wife with a romantic rooftop dinner, a sunset boat ride, and some relaxed days at the beach..."
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    rows={4}
+                    style={{
+                      ...inputStyle,
+                      resize: "vertical",
+                      minHeight: 90,
+                    }}
+                  />
+                </div>
+
+                {error && <div className="error-box">{error}</div>}
+
+                <button
+                  onClick={handleSubmit}
+                  disabled={loading}
+                  className="primary-btn"
+                >
+                  {loading
+                    ? "Planning your itinerary..."
+                    : "Generate itinerary"}
+                </button>
               </div>
-
-              {/* Budget slider */}
-              <div style={{ marginBottom: 16 }}>
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    marginBottom: 6,
-                    fontSize: 13,
-                  }}
-                >
-                  <span>Budget level (all inclusive)</span>
-                  <span style={{ fontSize: 12, color: "#444444" }}>
-                    Approx: ${budgetLevel.toLocaleString()}
-                  </span>
-                </div>
-                <input
-                  type="range"
-                  min={500}
-                  max={20000}
-                  step={500}
-                  value={budgetLevel}
-                  onChange={(e) => setBudgetLevel(Number(e.target.value))}
-                  style={{ width: "100%" }}
-                />
-                <div style={{ marginTop: 6, fontSize: 11, color: "#666666" }}>
-                  Drag to match your rough total budget.
-                </div>
-              </div>
-
-              {/* Duration slider */}
-              <div style={{ marginBottom: 16 }}>
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    marginBottom: 6,
-                    fontSize: 13,
-                  }}
-                >
-                  <span>Duration</span>
-                  <span style={{ fontSize: 12, color: "#444444" }}>
-                    {durationDays} {durationDays === 1 ? "day" : "days"}
-                  </span>
-                </div>
-                <input
-                  type="range"
-                  min={1}
-                  max={30}
-                  value={durationDays}
-                  onChange={(e) => setDurationDays(Number(e.target.value))}
-                  style={{ width: "100%" }}
-                />
-              </div>
-
-              {/* Notes */}
-              <div style={{ marginBottom: 14 }}>
-                <label style={labelStyle}>
-                  Tell TripPlanBuddy what you really want
-                </label>
-                <textarea
-                  placeholder="It's our honeymoon, I want to surprise my wife with a romantic rooftop dinner, a sunset boat ride, and some relaxed days at the beach..."
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  rows={4}
-                  style={{
-                    ...inputStyle,
-                    resize: "vertical",
-                    minHeight: 80,
-                  }}
-                />
-              </div>
-
-              {/* Error */}
-              {error && (
-                <div
-                  style={{
-                    fontSize: 12,
-                    color: "#b00020",
-                    backgroundColor: "#ffe6e9",
-                    padding: "8px 10px",
-                    borderRadius: 10,
-                    border: "1px solid #b00020",
-                    marginBottom: 8,
-                  }}
-                >
-                  {error}
-                </div>
-              )}
-
-              {/* Generate button */}
-              <button
-                onClick={handleSubmit}
-                disabled={loading}
-                style={{
-                  marginTop: 4,
-                  width: "100%",
-                  padding: "11px 12px",
-                  borderRadius: 999,
-                  border: "1px solid #000000",
-                  fontWeight: 600,
-                  fontSize: 14,
-                  cursor: loading ? "default" : "pointer",
-                  opacity: loading ? 0.7 : 1,
-                  backgroundColor: "#000000",
-                  color: "#ffffff",
-                }}
-              >
-                {loading ? "Planning your itinerary..." : "Generate itinerary"}
-              </button>
             </section>
           </div>
 
-          {/* RIGHT COLUMN – Itinerary card */}
+          {/* RIGHT COLUMN – Itinerary */}
           {showResultCard && (
             <section style={{ ...cardStyle, minHeight: 260 }}>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: 6,
-                }}
-              >
-                <h2
-                  style={{
-                    fontSize: 15,
-                    fontWeight: 600,
-                    color: "#111111",
-                  }}
-                >
-                  Your itinerary
-                </h2>
+              <div className="itinerary-header">
+                <h2 className="card-title">Your itinerary</h2>
               </div>
 
-              <div
-                style={{
-                  fontSize: 13,
-                  color: "#333333",
-                  lineHeight: 1.6,
-                  maxHeight: "65vh",
-                  overflowY: "auto",
-                  paddingRight: 4,
-                }}
-              >
+              <div className="itinerary-body">
                 {!result && !loading && !error && (
-                  <p style={{ color: "#666666", fontSize: 13 }}>
+                  <p className="placeholder">
                     Your itinerary will appear here after generation.
                   </p>
                 )}
 
                 {loading && (
-                  <p style={{ color: "#666666", fontSize: 13 }}>
+                  <p className="placeholder">
                     Planning your days, picking activities, and organizing your
                     trip…
                   </p>
                 )}
 
                 {result?.itinerary && (
-                  <pre
-                    style={{
-                      whiteSpace: "pre-wrap",
-                      fontFamily: "inherit",
-                      margin: 0,
-                    }}
-                  >
+                  <pre className="itinerary-text">
                     {result.itinerary}
                   </pre>
                 )}
               </div>
 
-              {/* Bottom bar with ONLY PDF download */}
               {result?.itinerary && (
-                <div
-                  style={{
-                    marginTop: 12,
-                    paddingTop: 10,
-                    borderTop: "1px solid #e5e5e5",
-                    display: "flex",
-                    justifyContent: "flex-end",
-                  }}
-                >
+                <div className="itinerary-footer">
                   <button
                     onClick={downloadAsPdf}
-                    style={{
-                      padding: "9px 16px",
-                      borderRadius: 999,
-                      border: "1px solid #000000",
-                      backgroundColor: "#000000",
-                      color: "#ffffff",
-                      fontSize: 13,
-                      fontWeight: 500,
-                      cursor: "pointer",
-                    }}
+                    className="primary-btn primary-btn--small"
                   >
                     Download itinerary (PDF)
                   </button>
@@ -598,6 +394,236 @@ export default function Home() {
           )}
         </div>
       </div>
+
+      {/* Styles */}
+      <style jsx>{`
+        .page-root {
+          min-height: 100vh;
+          display: flex;
+          justify-content: center;
+          padding: 32px 16px;
+          box-sizing: border-box;
+          background: radial-gradient(
+            circle at top left,
+            #e0f3ff,
+            #f5fbff,
+            #e0f3ff
+          ); /* light sky-blue/whitish */
+          color: #111111;
+          font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        .page-wrapper {
+          width: 100%;
+          max-width: 1120px;
+          margin: 0 auto;
+        }
+
+        .header {
+          margin-bottom: 28px;
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          gap: 16px;
+        }
+
+        .title {
+          font-size: 28px;
+          font-weight: 700;
+          color: #000000;
+          margin: 0 0 4px;
+        }
+
+        .subtitle {
+          font-size: 14px;
+          color: #444444;
+          max-width: 650px;
+          line-height: 1.5;
+          margin: 0;
+        }
+
+        .pill {
+          font-size: 11px;
+          padding: 5px 10px;
+          border-radius: 999px;
+          border: 1px solid #000000;
+          background-color: #ffffff;
+          white-space: nowrap;
+        }
+
+        .layout-grid {
+          display: grid;
+          gap: 24px;
+          grid-template-columns: minmax(0, 1.05fr) minmax(0, 1.25fr);
+          align-items: flex-start;
+        }
+
+        .left-column {
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+        }
+
+        .card-title {
+          margin: 0 0 10px;
+          font-size: 15px;
+          font-weight: 600;
+          color: #111111;
+        }
+
+        .card-body {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        .field {
+          width: 100%;
+        }
+
+        .field-label {
+          font-size: 13px;
+          margin-bottom: 6px;
+          color: #222222;
+        }
+
+        .field-label-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 6px;
+          font-size: 13px;
+        }
+
+        .muted {
+          font-size: 12px;
+          color: #444444;
+        }
+
+        .pace-row {
+          display: grid;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+          gap: 8px;
+        }
+
+        .pace-chip {
+          padding: 10px 6px;
+          border-radius: 12px;
+          border: 1px solid #d6d6d6;
+          background-color: #f8f8f8;
+          color: #111111;
+          font-size: 12px;
+          cursor: pointer;
+        }
+
+        .pace-chip--active {
+          border: 2px solid #000000;
+          background-color: #000000;
+          color: #ffffff;
+        }
+
+        .slider {
+          width: 100%;
+        }
+
+        .hint {
+          margin-top: 6px;
+          font-size: 11px;
+          color: #666666;
+        }
+
+        .error-box {
+          font-size: 12px;
+          color: #b00020;
+          background-color: #ffe6e9;
+          padding: 8px 10px;
+          border-radius: 10px;
+          border: 1px solid #b00020;
+          margin-bottom: 4px;
+        }
+
+        .primary-btn {
+          margin-top: 6px;
+          width: 100%;
+          padding: 11px 12px;
+          border-radius: 999px;
+          border: 1px solid #000000;
+          font-weight: 600;
+          font-size: 14px;
+          cursor: pointer;
+          background-color: #000000;
+          color: #ffffff;
+        }
+
+        .primary-btn--small {
+          width: auto;
+          padding: 9px 16px;
+          font-size: 13px;
+        }
+
+        .itinerary-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 6px;
+        }
+
+        .itinerary-body {
+          font-size: 13px;
+          color: #333333;
+          line-height: 1.6;
+          max-height: 65vh;
+          overflow-y: auto;
+          padding-right: 4px;
+        }
+
+        .placeholder {
+          color: #666666;
+          font-size: 13px;
+          margin: 0;
+        }
+
+        .itinerary-text {
+          white-space: pre-wrap;
+          font-family: inherit;
+          margin: 0;
+        }
+
+        .itinerary-footer {
+          margin-top: 14px;
+          padding-top: 10px;
+          border-top: 1px solid #e5e5e5;
+          display: flex;
+          justify-content: flex-end;
+        }
+
+        /* Tablet */
+        @media (max-width: 1024px) {
+          .layout-grid {
+            grid-template-columns: minmax(0, 1fr);
+          }
+        }
+
+        /* Mobile */
+        @media (max-width: 640px) {
+          .header {
+            flex-direction: column;
+            align-items: flex-start;
+          }
+
+          .title {
+            font-size: 24px;
+          }
+
+          .layout-grid {
+            gap: 20px;
+          }
+
+          .pace-row {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+        }
+      `}</style>
     </main>
   );
 }
