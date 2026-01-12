@@ -1,5 +1,4 @@
 export default async function handler(req, res) {
-  // Only allow POST
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -11,8 +10,11 @@ export default async function handler(req, res) {
       endDate,
       travelers,
       budget,
+      budgetValue,
       pace,
+      durationDays,
       interests,
+      notes,
     } = req.body || {};
 
     const apiKey = process.env.OPENAI_API_KEY;
@@ -30,14 +32,20 @@ Create a clear, realistic, day-by-day travel itinerary.
 Destination: ${destination}
 Dates: ${startDate} to ${endDate}
 Number of travelers: ${travelers}
-Budget: ${budget}
-Pace: ${pace}
+Budget label: ${budget}
+Approx total budget from slider: $${budgetValue}
+Preferred pace: ${pace}
+Preferred duration (from slider): ${durationDays} days
 Interests: ${Array.isArray(interests) ? interests.join(", ") : interests}
+
+Special notes from the traveler (very important, incorporate into the plan):
+${notes || "No extra notes provided."}
 
 Return a friendly text with:
 - Short trip overview
 - Day 1, Day 2, ... sections
 - Morning / Afternoon / Evening suggestions
+- Include at least one moment that matches their special notes (e.g., romantic dinners, surprises, etc.)
 - Some food/area suggestions
 - Important tips (tickets, weather, local transit, etc.)
 `;
