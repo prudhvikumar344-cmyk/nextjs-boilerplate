@@ -172,7 +172,7 @@ export default function Home() {
           <div>
             <h1 className="title">TripPlanBuddy</h1>
             <p className="subtitle">
-              Plan your trip in seconds. Set your basics, choose your pace and
+              Plan your trip in seconds. choose your pace and
               budget, tell TripPlanBuddy what you really want, and get a
               day-by-day itinerary you can download as a PDF.
             </p>
@@ -241,14 +241,6 @@ export default function Home() {
                         {item}
                       </option>
                     ))}
-                  </select>
-                  <div className="hint">
-                    Tip: Hold <strong>Ctrl</strong> (Windows) or{" "}
-                    <strong>Cmd</strong> (Mac) to select multiple interests.
-                  </div>
-                </div>
-              </div>
-            </section>
 
             {/* Trip style & notes */}
             <section style={cardStyle}>
