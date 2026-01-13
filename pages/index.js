@@ -1,6 +1,15 @@
 import { useState } from "react";
 import jsPDF from "jspdf";
 
+// Helper to clean up itinerary text (remove extra blank lines, trim, etc.)
+function formatItineraryText(raw) {
+  if (!raw) return "";
+  let t = raw.replace(/\r\n/g, "\n").trim();
+  // Collapse 3+ newlines into a single blank line
+  t = t.replace(/\n{3,}/g, "\n\n");
+  return t;
+}
+
 export default function Home() {
   const [destination, setDestination] = useState("");
   const [tripDate, setTripDate] = useState(""); // single date
@@ -13,6 +22,7 @@ export default function Home() {
   const [durationDays, setDurationDays] = useState(7);
 
   const [interests, setInterests] = useState([]); // optional
+  const [transportation, setTransportation] = useState("air"); // NEW
   const [notes, setNotes] = useState("");
 
   const [loading, setLoading] = useState(false);
@@ -74,6 +84,7 @@ export default function Home() {
           pace,
           durationDays,
           interests,
+          transportation, // NEW
           notes,
         }),
       });
@@ -84,7 +95,9 @@ export default function Home() {
         throw new Error(data.error || "Failed to generate itinerary.");
       }
 
-      setResult(data);
+      // Clean the itinerary text before storing
+      const cleaned = formatItineraryText(data.itinerary);
+      setResult({ itinerary: cleaned });
     } catch (err) {
       console.error(err);
       setError(err.message || "Something went wrong. Please try again.");
@@ -112,11 +125,18 @@ export default function Home() {
     doc.text(`Destination: ${titleDestination}`, marginLeft, marginTop + 20);
     doc.text(`Trip date & duration: ${dateLine}`, marginLeft, marginTop + 36);
     doc.text(
-      `Travelers: ${travelers || "N/A"}  •  Pace: ${pace}`,
+      `Travelers: ${travelers || "N/A"}  •  Pace: ${pace}  •  Transport: ${
+        transportation === "air"
+          ? "By air"
+          : transportation === "road"
+          ? "By road"
+          : "By water / cruise"
+      }`,
       marginLeft,
       marginTop + 52
     );
 
+    // Already cleaned text
     const bodyText = result.itinerary;
     const lines = doc.splitTextToSize(bodyText, maxWidth);
 
@@ -172,9 +192,9 @@ export default function Home() {
           <div>
             <h1 className="title">TripPlanBuddy</h1>
             <p className="subtitle">
-              Plan your trip in seconds. choose your pace and
-              budget, tell TripPlanBuddy what you really want, and get a
-              day-by-day itinerary you can download as a PDF.
+              Plan your trip in seconds. choose your pace and budget, tell
+              TripPlanBuddy what you really want, and get a day-by-day itinerary
+              you can download as a PDF.
             </p>
           </div>
 
@@ -221,6 +241,20 @@ export default function Home() {
                   />
                 </div>
 
+                {/* NEW: Mode of transportation */}
+                <div className="field">
+                  <label style={labelStyle}>Mode of transportation</label>
+                  <select
+                    value={transportation}
+                    onChange={(e) => setTransportation(e.target.value)}
+                    style={inputStyle}
+                  >
+                    <option value="air">By air (flight)</option>
+                    <option value="road">By road (car / bus / train)</option>
+                    <option value="water">By water / cruise</option>
+                  </select>
+                </div>
+
                 <div className="field">
                   <label style={labelStyle}>
                     Interests (optional – choose one or more)
@@ -241,6 +275,10 @@ export default function Home() {
                         {item}
                       </option>
                     ))}
+                  </select>
+                </div>
+              </div>
+            </section>
 
             {/* Trip style & notes */}
             <section style={cardStyle}>
