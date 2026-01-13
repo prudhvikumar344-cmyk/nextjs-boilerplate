@@ -6,14 +6,14 @@ export default async function handler(req, res) {
   try {
     const {
       destination,
-      startDate,
-      endDate,
+      tripDate,
       travelers,
       budget,
       budgetValue,
       pace,
       durationDays,
       interests,
+      transportation,
       notes,
     } = req.body || {};
 
@@ -30,24 +30,25 @@ You are TripPlanBuddy, an expert travel planner.
 Create a clear, realistic, day-by-day travel itinerary.
 
 Destination: ${destination}
-Dates: ${startDate} to ${endDate}
+Trip date: ${tripDate || "not specified"}
+Approx duration from slider: ${durationDays} days
 Number of travelers: ${travelers}
 Budget label: ${budget}
 Approx total budget from slider: $${budgetValue}
 Preferred pace: ${pace}
-Preferred duration (from slider): ${durationDays} days
-Interests: ${Array.isArray(interests) ? interests.join(", ") : interests}
+Preferred mode of transportation: ${
+      transportation || "not specified"
+    } (road / air / water)
+Interests (optional): ${Array.isArray(interests) ? interests.join(", ") : "None"}
 
 Special notes from the traveler (very important, incorporate into the plan):
 ${notes || "No extra notes provided."}
 
-Return a friendly text with:
-- Short trip overview
-- Day 1, Day 2, ... sections
-- Morning / Afternoon / Evening suggestions
-- Include at least one moment that matches their special notes (e.g., romantic dinners, surprises, etc.)
-- Some food/area suggestions
-- Important tips (tickets, weather, local transit, etc.)
+Formatting requirements:
+- Use plain text (no markdown symbols like **, bullets with hyphens only if needed).
+- Use concise paragraphs and Day 1 / Day 2 / ... headings.
+- Avoid more than one blank line between paragraphs.
+- Make it look clean and easy to read.
 `;
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -62,7 +63,7 @@ Return a friendly text with:
           {
             role: "system",
             content:
-              "You create practical, realistic travel itineraries in clear, simple English.",
+              "You create practical, realistic travel itineraries in clear, simple English with clean formatting.",
           },
           { role: "user", content: userPrompt },
         ],
