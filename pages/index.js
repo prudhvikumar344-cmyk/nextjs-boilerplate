@@ -57,6 +57,15 @@ export default function Home() {
     { value: "intense", label: "Intense" },
   ];
 
+  // Toggle a single interest on/off
+  const toggleInterest = (value) => {
+    setInterests((prev) =>
+      prev.includes(value)
+        ? prev.filter((i) => i !== value)
+        : [...prev, value]
+    );
+  };
+
   async function handleSubmit(e) {
     if (e) e.preventDefault();
     setError("");
@@ -84,7 +93,7 @@ export default function Home() {
           pace,
           durationDays,
           interests,
-          transportation, // NEW
+          transportation,
           notes,
         }),
       });
@@ -136,7 +145,6 @@ export default function Home() {
       marginTop + 52
     );
 
-    // Already cleaned text
     const bodyText = result.itinerary;
     const lines = doc.splitTextToSize(bodyText, maxWidth);
 
@@ -190,7 +198,14 @@ export default function Home() {
         {/* Header */}
         <header className="header">
           <div>
-            <h1 className="title">TripPlanBuddy</h1>
+            <div className="logo-title-row">
+              <img
+                src="/tripplanbuddy-logo.svg"
+                alt="TripPlanBuddy logo"
+                className="logo-mark"
+              />
+              <h1 className="title">TripPlanBuddy</h1>
+            </div>
             <p className="subtitle">
               Plan your trip in seconds. choose your pace and budget, tell
               TripPlanBuddy what you really want, and get a day-by-day itinerary
@@ -241,7 +256,7 @@ export default function Home() {
                   />
                 </div>
 
-                {/* NEW: Mode of transportation */}
+                {/* Mode of transportation */}
                 <div className="field">
                   <label style={labelStyle}>Mode of transportation</label>
                   <select
@@ -255,27 +270,31 @@ export default function Home() {
                   </select>
                 </div>
 
+                {/* Interests as checkbox pills */}
                 <div className="field">
                   <label style={labelStyle}>
                     Interests (optional – choose one or more)
                   </label>
-                  <select
-                    multiple
-                    value={interests}
-                    onChange={(e) => {
-                      const selected = Array.from(
-                        e.target.selectedOptions
-                      ).map((o) => o.value);
-                      setInterests(selected);
-                    }}
-                    style={{ ...inputStyle, height: 110 }}
-                  >
-                    {interestOptions.map((item) => (
-                      <option key={item} value={item}>
-                        {item}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="interests-grid">
+                    {interestOptions.map((item) => {
+                      const active = interests.includes(item);
+                      return (
+                        <label
+                          key={item}
+                          className={`interest-pill ${
+                            active ? "interest-pill--active" : ""
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={active}
+                            onChange={() => toggleInterest(item)}
+                          />
+                          <span>{item}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             </section>
@@ -457,11 +476,23 @@ export default function Home() {
           gap: 16px;
         }
 
+        .logo-title-row {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          margin-bottom: 4px;
+        }
+
+        .logo-mark {
+          height: 30px;
+          width: auto;
+        }
+
         .title {
           font-size: 28px;
           font-weight: 700;
           color: #000000;
-          margin: 0 0 4px;
+          margin: 0;
         }
 
         .subtitle {
@@ -560,6 +591,36 @@ export default function Home() {
           margin-top: 6px;
           font-size: 11px;
           color: #666666;
+        }
+
+        .interests-grid {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+
+        .interest-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 7px 10px;
+          border-radius: 999px;
+          border: 1px solid #d6d6d6;
+          background-color: #f8f8f8;
+          font-size: 12px;
+          cursor: pointer;
+          color: #111111;
+          user-select: none;
+        }
+
+        .interest-pill input {
+          display: none;
+        }
+
+        .interest-pill--active {
+          border: 2px solid #000000;
+          background-color: #000000;
+          color: #ffffff;
         }
 
         .error-box {
