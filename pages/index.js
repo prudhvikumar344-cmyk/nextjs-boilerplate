@@ -483,10 +483,19 @@ export default function Home() {
           margin-bottom: 4px;
         }
 
-        .logo-mark {
-          height: 30px;
-          width: auto;
-        }
+        .logo {
+  width: 64px;
+  height: 64px;
+  margin-right: 16px;
+}
+
+@media (max-width: 640px) {
+  .logo {
+    width: 48px;
+    height: 48px;
+    margin-right: 12px;
+  }
+}
 
         .title {
           font-size: 28px;
