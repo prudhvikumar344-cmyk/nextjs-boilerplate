@@ -200,7 +200,7 @@ export default function Home() {
           <div>
             <div className="logo-title-row">
               <img
-                src="/tripplanbuddy-logo.svg"
+                src="/tripplanbuddy-logo.png"
                 alt="TripPlanBuddy logo"
                 className="logo-mark"
               />
@@ -445,6 +445,7 @@ export default function Home() {
       </div>
 
       {/* Styles */}
+            {/* Styles */}
       <style jsx>{`
         .page-root {
           min-height: 100vh;
@@ -483,19 +484,20 @@ export default function Home() {
           margin-bottom: 4px;
         }
 
-        .logo {
-  width: 64px;
-  height: 64px;
-  margin-right: 16px;
-}
+        /* NEW: actual logo image class (matches className="logo-mark") */
+        .logo-mark {
+          width: 64px;
+          height: 64px;
+          margin-right: 16px;
+        }
 
-@media (max-width: 640px) {
-  .logo {
-    width: 48px;
-    height: 48px;
-    margin-right: 12px;
-  }
-}
+        @media (max-width: 640px) {
+          .logo-mark {
+            width: 48px;
+            height: 48px;
+            margin-right: 12px;
+          }
+        }
 
         .title {
           font-size: 28px;
