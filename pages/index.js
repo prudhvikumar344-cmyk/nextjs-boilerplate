@@ -1,5 +1,9 @@
 import { useState } from "react";
+import Head from "next/head";
 import jsPDF from "jspdf";
+// Imported (not referenced via a "/..." public URL) so it works regardless
+// of the static assets folder's exact casing on disk.
+import logoImg from "../Public/tripplanbuddy-logo.png";
 
 // Helper to clean up itinerary text (remove extra blank lines, trim, etc.)
 function formatItineraryText(raw) {
@@ -10,13 +14,21 @@ function formatItineraryText(raw) {
   return t;
 }
 
+// Derive a low/medium/high budget label from the slider value
+// (previously this was a separate piece of state that never actually
+// updated when the user moved the slider)
+function budgetLabelFor(level) {
+  if (level < 2000) return "low";
+  if (level < 8000) return "medium";
+  return "high";
+}
+
 export default function Home() {
   const [destination, setDestination] = useState("");
   const [tripDate, setTripDate] = useState(""); // single date
   const [travelers, setTravelers] = useState("2");
 
   const [budgetLevel, setBudgetLevel] = useState(1000);
-  const [budget, setBudget] = useState("medium");
 
   const [pace, setPace] = useState("normal");
   const [durationDays, setDurationDays] = useState(7);
@@ -88,7 +100,7 @@ export default function Home() {
           destination,
           tripDate,
           travelers,
-          budget,
+          budget: budgetLabelFor(budgetLevel),
           budgetValue: budgetLevel,
           pace,
           durationDays,
@@ -194,13 +206,53 @@ export default function Home() {
 
   return (
     <main className="page-root">
+      <Head>
+        <title>TripPlanBuddy — Free AI Travel Itinerary Planner</title>
+        <meta
+          name="description"
+          content="Plan your next trip in seconds, for free. Tell TripPlanBuddy your destination, dates, budget, and interests, and get a personalized day-by-day travel itinerary you can download as a PDF."
+        />
+        <meta
+          name="keywords"
+          content="travel itinerary, trip planner, free travel planner, AI trip planner, vacation planner, travel itinerary generator"
+        />
+        <link rel="canonical" href="https://tripplanbuddy.com/" />
+
+        {/* Open Graph */}
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content="TripPlanBuddy — Free AI Travel Itinerary Planner" />
+        <meta
+          property="og:description"
+          content="Plan your next trip in seconds, for free. Get a personalized day-by-day travel itinerary you can download as a PDF."
+        />
+        <meta property="og:url" content="https://tripplanbuddy.com/" />
+        <meta property="og:site_name" content="TripPlanBuddy" />
+
+        {/* Twitter */}
+        <meta name="twitter:card" content="summary" />
+        <meta name="twitter:title" content="TripPlanBuddy — Free AI Travel Itinerary Planner" />
+        <meta
+          name="twitter:description"
+          content="Plan your next trip in seconds, for free. Get a personalized day-by-day travel itinerary you can download as a PDF."
+        />
+
+        {/* Favicon: inline SVG data URI so it doesn't depend on any static file */}
+        <link
+          rel="icon"
+          href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A7%B3%3C/text%3E%3C/svg%3E"
+        />
+
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="theme-color" content="#e0f3ff" />
+      </Head>
+
       <div className="page-wrapper">
         {/* Header */}
         <header className="header">
           <div>
             <div className="logo-title-row">
               <img
-                src="/tripplanbuddy-logo.png"
+                src={logoImg.src || logoImg}
                 alt="TripPlanBuddy logo"
                 className="logo-mark"
               />
@@ -445,7 +497,6 @@ export default function Home() {
       </div>
 
       {/* Styles */}
-            {/* Styles */}
       <style jsx>{`
         .page-root {
           min-height: 100vh;
