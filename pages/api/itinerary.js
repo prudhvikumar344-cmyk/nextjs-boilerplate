@@ -1,6 +1,6 @@
 // --- Very lightweight abuse protection -------------------------------
 // This is a free, public, unauthenticated endpoint that calls the paid
-// OpenAI API, so without *some* guard a bot (or an impatient double-click)
+// Claude API, so without *some* guard a bot (or an impatient double-click)
 // can run up an unbounded bill. This in-memory limiter isn't perfect —
 // serverless functions can spin up multiple instances, so a determined
 // attacker could still get around it — but it stops the common cases
@@ -73,10 +73,10 @@ export default async function handler(req, res) {
     const safeNotes =
       typeof notes === "string" ? notes.slice(0, 2000) : "";
 
-    const apiKey = process.env.OPENAI_API_KEY;
+    const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) {
       return res.status(500).json({
-        error: "Missing OPENAI_API_KEY environment variable in Vercel.",
+        error: "Missing ANTHROPIC_API_KEY environment variable in Vercel.",
       });
     }
 
@@ -107,23 +107,20 @@ Formatting requirements:
 - Make it look clean and easy to read.
 `;
 
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "system",
-            content:
-              "You create practical, realistic travel itineraries in clear, simple English with clean formatting.",
-          },
-          { role: "user", content: userPrompt },
-        ],
+        model: "claude-sonnet-5",
+        max_tokens: 4096,
         temperature: 0.7,
+        system:
+          "You create practical, realistic travel itineraries in clear, simple English with clean formatting.",
+        messages: [{ role: "user", content: userPrompt }],
       }),
     });
 
@@ -132,13 +129,13 @@ Formatting requirements:
     if (!response.ok) {
       const message =
         data?.error?.message ||
-        `OpenAI API error (status ${response.status}). Check your API key and billing.`;
-      console.error("OpenAI API error:", message);
+        `Claude API error (status ${response.status}). Check your API key and billing.`;
+      console.error("Claude API error:", message);
       return res.status(response.status).json({ error: message });
     }
 
     const itineraryText =
-      data.choices?.[0]?.message?.content || "No itinerary generated.";
+      data?.content?.[0]?.text || "No itinerary generated.";
 
     return res.status(200).json({ itinerary: itineraryText });
   } catch (err) {
@@ -149,4 +146,4 @@ Formatting requirements:
         "Server error while generating itinerary. Check logs on Vercel.",
     });
   }
-}
+    }
