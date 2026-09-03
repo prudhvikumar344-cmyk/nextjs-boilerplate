@@ -117,7 +117,9 @@ Formatting requirements:
       body: JSON.stringify({
         model: "claude-sonnet-5",
         max_tokens: 4096,
-        temperature: 0.7,
+        // NOTE: `temperature` is intentionally omitted — Claude Sonnet 5
+        // deprecated this parameter and rejects requests that include it
+        // with a 400 error ("`temperature` is deprecated for this model").
         system:
           "You create practical, realistic travel itineraries in clear, simple English with clean formatting.",
         messages: [{ role: "user", content: userPrompt }],
@@ -146,4 +148,4 @@ Formatting requirements:
         "Server error while generating itinerary. Check logs on Vercel.",
     });
   }
-    }
+}
