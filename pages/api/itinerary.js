@@ -136,8 +136,27 @@ Formatting requirements:
       return res.status(response.status).json({ error: message });
     }
 
-    const itineraryText =
-      data?.content?.[0]?.text || "No itinerary generated.";
+    // Claude's response can include multiple content blocks (e.g. a
+    // "thinking" block before the actual reply), so find the first
+    // text block instead of assuming it's always at index 0.
+    const textBlock = Array.isArray(data?.content)
+      ? data.content.find((block) => block?.type === "text" && block?.text)
+      : null;
+    const itineraryText = textBlock?.text || "No itinerary generated.";
+
+    if (!textBlock) {
+      // Diagnostic only — helps us see in Vercel logs exactly what shape
+      // Claude returned if this ever happens again (e.g. hit max_tokens
+      // mid-thinking, or a response format we don't handle yet).
+      console.error(
+        "No text block in Claude response. stop_reason:",
+        data?.stop_reason,
+        "content block types:",
+        Array.isArray(data?.content)
+          ? data.content.map((b) => b?.type)
+          : typeof data?.content
+      );
+    }
 
     return res.status(200).json({ itinerary: itineraryText });
   } catch (err) {
