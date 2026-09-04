@@ -32,7 +32,6 @@ function getClientIp(req) {
   if (forwarded) return forwarded.split(",")[0].trim();
   return req.socket?.remoteAddress || "unknown";
 }
-
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
@@ -48,15 +47,20 @@ export default async function handler(req, res) {
 
   try {
     const {
+      origin,
       destination,
       tripDate,
       travelers,
       budget,
       budgetValue,
+      currency,
       pace,
       durationDays,
       interests,
+      tripType,
       transportation,
+      wantsTransportSuggestions,
+      budgetIncludesRoundTrip,
       notes,
     } = req.body || {};
 
@@ -72,6 +76,35 @@ export default async function handler(req, res) {
     );
     const safeNotes =
       typeof notes === "string" ? notes.slice(0, 2000) : "";
+    const safeOrigin =
+      typeof origin === "string" ? origin.slice(0, 200) : "";
+    const safeCurrency =
+      typeof currency === "string" && currency.trim()
+        ? currency.trim().toUpperCase().slice(0, 6)
+        : "USD";
+
+    // Build the transportation guidance for the prompt from the two
+    // related Yes/No answers collected in the UI.
+    let transportGuidance;
+    if (wantsTransportSuggestions === true) {
+      transportGuidance = `The traveler wants transportation options suggested. Include a short "Getting there" section with 2-3 realistic ${
+        transportation === "air"
+          ? "flight routes/airlines"
+          : transportation === "water"
+          ? "ferry/cruise options"
+          : "road/rail/bus options"
+      } from ${
+        safeOrigin || "their departure city"
+      } to ${destination}, with an approximate cost range in ${safeCurrency}. Clearly label these as illustrative estimates, not live bookable prices, since you do not have access to real-time fares.`;
+    } else if (wantsTransportSuggestions === false) {
+      transportGuidance =
+        budgetIncludesRoundTrip === true
+          ? `The traveler is arranging their own transportation and confirmed the budget below ALREADY includes round-trip travel to/from ${destination}. Allocate the budget across transportation, lodging, food, and activities accordingly — do not assume the full amount is available for on-the-ground spending alone.`
+          : `The traveler is arranging their own transportation and confirmed the budget below does NOT include round-trip travel to/from ${destination}. Treat the budget as covering only on-the-ground expenses (lodging, food, local transport, activities), and add a brief reminder that round-trip transportation should be budgeted separately.`;
+    } else {
+      transportGuidance =
+        "The traveler didn't specify whether they want transportation suggestions or whether the budget includes round-trip travel — assume the budget is for on-the-ground expenses and mention transportation only briefly.";
+    }
 
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) {
@@ -85,17 +118,23 @@ You are TripPlanBuddy, an expert travel planner.
 
 Create a clear, realistic, day-by-day travel itinerary.
 
+Traveling from: ${safeOrigin || "not specified"}
 Destination: ${destination}
 Trip date: ${tripDate || "not specified"}
 Approx duration from slider: ${safeDurationDays} days
 Number of travelers: ${travelers}
 Budget label: ${budget}
-Approx total budget from slider: $${budgetValue}
+Approx total budget from slider: ${safeCurrency} ${budgetValue}
 Preferred pace: ${pace}
 Preferred mode of transportation: ${
       transportation || "not specified"
     } (road / air / water)
+Who this trip is for: ${
+      Array.isArray(tripType) && tripType.length ? tripType.join(", ") : "not specified"
+    }
 Interests (optional): ${Array.isArray(interests) ? interests.join(", ") : "None"}
+
+Transportation guidance: ${transportGuidance}
 
 Special notes from the traveler (very important, incorporate into the plan):
 ${safeNotes || "No extra notes provided."}
@@ -104,6 +143,7 @@ Formatting requirements:
 - Use plain text (no markdown symbols like **, bullets with hyphens only if needed).
 - Use concise paragraphs and Day 1 / Day 2 / ... headings.
 - Avoid more than one blank line between paragraphs.
+- All money amounts should be in ${safeCurrency}, clearly labeled — do not silently convert to a different currency.
 - Make it look clean and easy to read.
 `;
 
