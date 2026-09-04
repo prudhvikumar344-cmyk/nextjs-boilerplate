@@ -60,17 +60,26 @@ function DownloadIcon() {
 }
 
 export default function Home() {
+  const [origin, setOrigin] = useState(""); // NEW – where the trip starts from
   const [destination, setDestination] = useState("");
   const [tripDate, setTripDate] = useState(""); // single date
   const [travelers, setTravelers] = useState("2");
 
   const [budgetLevel, setBudgetLevel] = useState(1000);
+  const [currency, setCurrency] = useState("USD"); // NEW – budget currency
+  const [useUSD, setUseUSD] = useState(true); // NEW – "budget is in USD" checkbox
 
   const [pace, setPace] = useState("normal");
   const [durationDays, setDurationDays] = useState(7);
 
   const [interests, setInterests] = useState([]); // optional
+  const [tripType, setTripType] = useState([]); // NEW – family, friends, kids, etc.
   const [transportation, setTransportation] = useState("air"); // NEW
+  // NEW – null = not answered yet, true/false once the traveler picks
+  const [wantsTransportSuggestions, setWantsTransportSuggestions] =
+    useState(null);
+  const [budgetIncludesRoundTrip, setBudgetIncludesRoundTrip] =
+    useState(null);
   const [notes, setNotes] = useState("");
 
   const [loading, setLoading] = useState(false);
@@ -105,9 +114,46 @@ export default function Home() {
     { value: "intense", label: "Intense" },
   ];
 
+  // Who the trip is for / the vibe you're going for (NEW)
+  const tripTypeOptions = [
+    "Family",
+    "Friends",
+    "Fun",
+    "Adventure",
+    "Kids",
+    "Seniors",
+  ];
+
+  // A short, curated list is friendlier than every ISO currency code.
+  const currencyOptions = [
+    { value: "USD", label: "USD – US Dollar" },
+    { value: "EUR", label: "EUR – Euro" },
+    { value: "GBP", label: "GBP – British Pound" },
+    { value: "INR", label: "INR – Indian Rupee" },
+    { value: "JPY", label: "JPY – Japanese Yen" },
+    { value: "AUD", label: "AUD – Australian Dollar" },
+    { value: "CAD", label: "CAD – Canadian Dollar" },
+    { value: "CNY", label: "CNY – Chinese Yuan" },
+    { value: "SGD", label: "SGD – Singapore Dollar" },
+    { value: "AED", label: "AED – UAE Dirham" },
+    { value: "CHF", label: "CHF – Swiss Franc" },
+    { value: "MXN", label: "MXN – Mexican Peso" },
+    { value: "BRL", label: "BRL – Brazilian Real" },
+    { value: "ZAR", label: "ZAR – South African Rand" },
+  ];
+
   // Toggle a single interest on/off
   const toggleInterest = (value) => {
     setInterests((prev) =>
+      prev.includes(value)
+        ? prev.filter((i) => i !== value)
+        : [...prev, value]
+    );
+  };
+
+  // Toggle a single trip-type tag on/off (NEW)
+  const toggleTripType = (value) => {
+    setTripType((prev) =>
       prev.includes(value)
         ? prev.filter((i) => i !== value)
         : [...prev, value]
@@ -133,15 +179,20 @@ export default function Home() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          origin,
           destination,
           tripDate,
           travelers,
           budget: budgetLabelFor(budgetLevel),
           budgetValue: budgetLevel,
+          currency: useUSD ? "USD" : currency,
           pace,
           durationDays,
           interests,
+          tripType,
           transportation,
+          wantsTransportSuggestions,
+          budgetIncludesRoundTrip,
           notes,
         }),
       });
@@ -167,6 +218,9 @@ export default function Home() {
     if (!result?.itinerary) return;
 
     const titleDestination = destination || "Your Trip";
+    const routeLine = origin
+      ? `${origin} → ${titleDestination}`
+      : titleDestination;
     const dateLine = tripDate
       ? `${tripDate} (around ${durationDays} days)`
       : `Around ${durationDays} days`;
@@ -179,7 +233,7 @@ export default function Home() {
     doc.setFontSize(16);
     doc.text(`TripPlanBuddy Itinerary`, marginLeft, marginTop);
     doc.setFontSize(12);
-    doc.text(`Destination: ${titleDestination}`, marginLeft, marginTop + 20);
+    doc.text(`Trip: ${routeLine}`, marginLeft, marginTop + 20);
     doc.text(`Trip date & duration: ${dateLine}`, marginLeft, marginTop + 36);
     doc.text(
       `Travelers: ${travelers || "N/A"}  •  Pace: ${pace}  •  Transport: ${
@@ -368,14 +422,25 @@ export default function Home() {
                 <h2 className="card-title">Trip basics</h2>
 
                 <div className="card-body">
-                  <div className="field">
-                    <label className="label">Destination</label>
-                    <input
-                      placeholder="Tokyo, Paris, Bali..."
-                      value={destination}
-                      onChange={(e) => setDestination(e.target.value)}
-                      className="input"
-                    />
+                  <div className="field-row-2">
+                    <div className="field">
+                      <label className="label">From (optional)</label>
+                      <input
+                        placeholder="e.g. New York"
+                        value={origin}
+                        onChange={(e) => setOrigin(e.target.value)}
+                        className="input"
+                      />
+                    </div>
+                    <div className="field">
+                      <label className="label">To</label>
+                      <input
+                        placeholder="Tokyo, Paris, Bali..."
+                        value={destination}
+                        onChange={(e) => setDestination(e.target.value)}
+                        className="input"
+                      />
+                    </div>
                   </div>
 
                   <div className="field">
@@ -413,6 +478,101 @@ export default function Home() {
                       <option value="road">By road (car / bus / train)</option>
                       <option value="water">By water / cruise</option>
                     </select>
+                  </div>
+
+                  {/* NEW – whether to suggest actual transport/flight options */}
+                  <div className="field">
+                    <div className="field-label">
+                      Want transportation options suggested (e.g. flights)?
+                    </div>
+                    <div className="yesno-row">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setWantsTransportSuggestions(true);
+                          setBudgetIncludesRoundTrip(null);
+                        }}
+                        className={`pace-chip ${
+                          wantsTransportSuggestions === true
+                            ? "pace-chip--active"
+                            : ""
+                        }`}
+                      >
+                        Yes, suggest some
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setWantsTransportSuggestions(false)}
+                        className={`pace-chip ${
+                          wantsTransportSuggestions === false
+                            ? "pace-chip--active"
+                            : ""
+                        }`}
+                      >
+                        No, I've got it
+                      </button>
+                    </div>
+
+                    {/* Only asked once they say "No" – otherwise we're the ones suggesting transport */}
+                    {wantsTransportSuggestions === false && (
+                      <div className="follow-up-field">
+                        <div className="field-label">
+                          Does your budget already include round-trip
+                          tickets?
+                        </div>
+                        <div className="yesno-row">
+                          <button
+                            type="button"
+                            onClick={() => setBudgetIncludesRoundTrip(true)}
+                            className={`pace-chip ${
+                              budgetIncludesRoundTrip === true
+                                ? "pace-chip--active"
+                                : ""
+                            }`}
+                          >
+                            Yes, it's included
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setBudgetIncludesRoundTrip(false)}
+                            className={`pace-chip ${
+                              budgetIncludesRoundTrip === false
+                                ? "pace-chip--active"
+                                : ""
+                            }`}
+                          >
+                            No, separate
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* NEW – who the trip is for / the vibe */}
+                  <div className="field">
+                    <label className="label">
+                      Who&rsquo;s this trip for? (optional)
+                    </label>
+                    <div className="interests-grid">
+                      {tripTypeOptions.map((item) => {
+                        const active = tripType.includes(item);
+                        return (
+                          <label
+                            key={item}
+                            className={`interest-pill ${
+                              active ? "interest-pill--active" : ""
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={active}
+                              onChange={() => toggleTripType(item)}
+                            />
+                            <span>{item}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
                   </div>
 
                   {/* Interests as checkbox pills */}
@@ -476,7 +636,8 @@ export default function Home() {
                     <div className="field-label-row">
                       <span>Budget level (all inclusive)</span>
                       <span className="muted">
-                        Approx: ${budgetLevel.toLocaleString()}
+                        Approx: {useUSD ? "$" : currency + " "}
+                        {budgetLevel.toLocaleString()}
                       </span>
                     </div>
                     <input
@@ -489,7 +650,31 @@ export default function Home() {
                       className="slider"
                     />
                     <div className="hint">
-                      Drag to match your rough total budget (up to $100,000).
+                      Drag to match your rough total budget (up to 100,000).
+                    </div>
+
+                    {/* NEW – local currency + "use USD instead" checkbox */}
+                    <div className="currency-row">
+                      <select
+                        value={currency}
+                        onChange={(e) => setCurrency(e.target.value)}
+                        disabled={useUSD}
+                        className="input currency-select"
+                      >
+                        {currencyOptions.map((c) => (
+                          <option key={c.value} value={c.value}>
+                            {c.label}
+                          </option>
+                        ))}
+                      </select>
+                      <label className="checkbox-row">
+                        <input
+                          type="checkbox"
+                          checked={useUSD}
+                          onChange={(e) => setUseUSD(e.target.checked)}
+                        />
+                        <span>I want my budget in USD</span>
+                      </label>
                     </div>
                   </div>
 
@@ -1008,6 +1193,60 @@ export default function Home() {
           font-weight: 600;
         }
 
+        /* NEW – From / To side-by-side row */
+        .field-row-2 {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 12px;
+        }
+
+        /* NEW – Yes/No question rows (transport suggestions, round-trip) */
+        .yesno-row {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 8px;
+        }
+
+        .follow-up-field {
+          margin-top: 12px;
+          padding-top: 12px;
+          border-top: 1px dashed #e2e8f0;
+        }
+
+        /* NEW – currency dropdown + "use USD" checkbox under the budget slider */
+        .currency-row {
+          margin-top: 10px;
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          gap: 10px;
+        }
+
+        .currency-select {
+          width: auto;
+          flex: 1 1 200px;
+        }
+
+        .currency-select:disabled {
+          background-color: #f1f5f9;
+          color: #94a3b8;
+          cursor: not-allowed;
+        }
+
+        .checkbox-row {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 13px;
+          color: #334155;
+          cursor: pointer;
+          user-select: none;
+        }
+
+        .checkbox-row input {
+          accent-color: #4f46e5;
+        }
+
         .error-box {
           font-size: 13px;
           color: #b91c1c;
@@ -1153,8 +1392,12 @@ export default function Home() {
           .pace-row {
             grid-template-columns: repeat(2, minmax(0, 1fr));
           }
+
+          .field-row-2 {
+            grid-template-columns: 1fr;
+          }
         }
       `}</style>
     </main>
   );
-            }
+}
