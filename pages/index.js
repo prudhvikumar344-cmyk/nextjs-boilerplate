@@ -127,6 +127,11 @@ export default function Home() {
   // NEW – lets a traveler type an exact day count instead of being limited
   // to what the slider can represent (a trip could be 90, 120... days).
   const [useCustomDuration, setUseCustomDuration] = useState(false);
+  // NEW – same idea as useCustomDuration: the slider's range/step is a
+  // rough per-currency guess and won't fit everyone (e.g. someone whose
+  // real budget falls between two step increments), so let them just type
+  // the exact number instead.
+  const [useCustomBudget, setUseCustomBudget] = useState(false);
 
   const [interests, setInterests] = useState([]); // optional
   const [tripType, setTripType] = useState([]); // NEW – family, friends, kids, etc.
@@ -201,9 +206,10 @@ export default function Home() {
 
   // If the traveler switches currency (e.g. from INR's much bigger range
   // down to USD's smaller one), make sure the slider value can't get stuck
-  // above the new max.
+  // above the new max. Skipped while typing a custom amount – that's the
+  // whole point of that mode, it's allowed to exceed the slider's range.
   useEffect(() => {
-    if (budgetLevel > budgetConfig.max) {
+    if (!useCustomBudget && budgetLevel > budgetConfig.max) {
       setBudgetLevel(budgetConfig.max);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -770,7 +776,9 @@ export default function Home() {
                     </div>
                   </div>
 
-                  {/* Budget slider – range depends on the chosen currency */}
+                  {/* Budget slider – range depends on the chosen currency,
+                      with a fallback to type the exact number (same idea
+                      as the duration field below) */}
                   <div className="field">
                     <div className="field-label-row">
                       <span>Budget level (all inclusive)</span>
@@ -782,29 +790,64 @@ export default function Home() {
                         {budgetAbbrev ? ` (${budgetAbbrev})` : ""}
                       </span>
                     </div>
-                    <input
-                      type="range"
-                      min={500}
-                      max={budgetConfig.max}
-                      step={budgetConfig.step}
-                      value={budgetLevel}
-                      onChange={(e) => setBudgetLevel(Number(e.target.value))}
-                      className="slider"
-                    />
+
+                    {!useCustomBudget && (
+                      <input
+                        type="range"
+                        min={500}
+                        max={budgetConfig.max}
+                        step={budgetConfig.step}
+                        value={budgetLevel}
+                        onChange={(e) =>
+                          setBudgetLevel(Number(e.target.value))
+                        }
+                        className="slider"
+                      />
+                    )}
+
+                    {useCustomBudget && (
+                      <input
+                        type="number"
+                        min={0}
+                        value={budgetLevel}
+                        onChange={(e) => {
+                          const raw = Number(e.target.value) || 0;
+                          setBudgetLevel(Math.max(raw, 0));
+                        }}
+                        placeholder={`Enter amount in ${activeCurrency}`}
+                        className="input custom-budget-input"
+                      />
+                    )}
+
                     <div className="hint">
-                      Drag to match your rough total budget (up to{" "}
-                      {budgetConfig.max.toLocaleString(
-                        activeCurrency === "INR" ? "en-IN" : "en-US"
-                      )}
-                      {formatBudgetAbbrev(budgetConfig.max, activeCurrency)
-                        ? ` / ${formatBudgetAbbrev(
-                            budgetConfig.max,
-                            activeCurrency
-                          )}`
-                        : ""}
-                      ).
+                      {useCustomBudget
+                        ? "Type the exact total budget for the whole trip."
+                        : <>
+                            Drag to match your rough total budget (up to{" "}
+                            {budgetConfig.max.toLocaleString(
+                              activeCurrency === "INR" ? "en-IN" : "en-US"
+                            )}
+                            {formatBudgetAbbrev(budgetConfig.max, activeCurrency)
+                              ? ` / ${formatBudgetAbbrev(
+                                  budgetConfig.max,
+                                  activeCurrency
+                                )}`
+                              : ""}
+                            ).
+                          </>}
                     </div>
 
+                    <label className="checkbox-row custom-duration-toggle">
+                      <input
+                        type="checkbox"
+                        checked={useCustomBudget}
+                        onChange={(e) => setUseCustomBudget(e.target.checked)}
+                      />
+                      <span>
+                        Slider doesn&rsquo;t fit my budget — let me type the
+                        exact amount
+                      </span>
+                    </label>
                     {/* NEW – local currency + "use USD instead" checkbox */}
                     <div className="currency-row">
                       <select
@@ -1458,6 +1501,10 @@ export default function Home() {
         .custom-duration-input {
           width: 140px;
         }
+        .custom-budget-input {
+          width: 220px;
+        }
+
 
         .custom-duration-toggle {
           margin-top: 10px;
