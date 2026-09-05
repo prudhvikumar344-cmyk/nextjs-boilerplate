@@ -86,25 +86,20 @@ export default function Home() {
   const [error, setError] = useState("");
   const [result, setResult] = useState(null);
   const [showResultCard, setShowResultCard] = useState(false);
+  // NEW – feedback line under the "Share to phone" button (e.g. "Copied!"
+  // on desktop browsers that don't support the native share sheet)
+  const [shareMessage, setShareMessage] = useState("");
 
-  // Expanded interest options, including kids/teens/seniors/clubs/pubs
+  // Kept short on purpose so the form stays quick to fill in. Audience-based
+  // interests (kids/teens/seniors, etc.) already live in the "Who's this
+  // trip for?" tags above, so we don't repeat them here.
   const interestOptions = [
-    "Sightseeing & Landmarks",
-    "Food & Cafes",
-    "Fine Dining",
-    "Shopping & Malls",
-    "Nature & Hiking",
-    "Beaches & Relaxation",
-    "Museums & Culture",
-    "Family-friendly / Kids",
-    "Theme Parks & Attractions",
-    "Teen-friendly Hangouts",
-    "Senior-friendly / Low Walking",
-    "Spa & Wellness",
-    "Adventure Sports",
-    "Clubs & Nightlife",
-    "Pubs & Bars",
-    "Religious / Spiritual Sites",
+    "Sightseeing & Culture",
+    "Food & Dining",
+    "Shopping",
+    "Nature & Outdoors",
+    "Nightlife & Entertainment",
+    "Relaxation & Wellness",
   ];
 
   const paceOptions = [
@@ -214,9 +209,9 @@ export default function Home() {
     }
   }
 
-  function downloadAsPdf() {
-    if (!result?.itinerary) return;
-
+  // Shared by both the "Download PDF" button and the "Share to phone"
+  // button, so the two never drift apart into two different layouts.
+  function buildPdfDoc() {
     const titleDestination = destination || "Your Trip";
     const routeLine = origin
       ? `${origin} → ${titleDestination}`
@@ -263,7 +258,79 @@ export default function Home() {
       currentY += lineHeight;
     });
 
-    doc.save("tripplanbuddy-itinerary.pdf");
+    return doc;
+  }
+
+  function downloadAsPdf() {
+    if (!result?.itinerary) return;
+    buildPdfDoc().save("tripplanbuddy-itinerary.pdf");
+  }
+
+  // "Send to your phone" – there's no SMS involved (that needs a paid
+  // texting service and a backend), this just uses the phone's own native
+  // share sheet, which is free and built into every modern mobile browser.
+  // Tapping it lets you send the itinerary straight to Messages, WhatsApp,
+  // Mail, Notes, etc. On a desktop browser that doesn't have a share sheet,
+  // we fall back to copying the itinerary text so you can paste it into a
+  // text/email to yourself instead.
+  async function shareItinerary() {
+    if (!result?.itinerary) return;
+    setShareMessage("");
+
+    const titleDestination = destination || "Your Trip";
+    const shareTitle = `TripPlanBuddy Itinerary – ${titleDestination}`;
+
+    try {
+      // Prefer sharing the actual PDF file, so it arrives as a proper
+      // attachment instead of a wall of plain text (supported on recent
+      // Android Chrome and iOS Safari 16.4+).
+      if (typeof navigator !== "undefined" && navigator.canShare) {
+        const blob = buildPdfDoc().output("blob");
+        const file = new File([blob], "tripplanbuddy-itinerary.pdf", {
+          type: "application/pdf",
+        });
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            title: shareTitle,
+            text: `Here's my trip plan for ${titleDestination}!`,
+            files: [file],
+          });
+          return;
+        }
+      }
+
+      // Next best: share the itinerary as plain text through the native
+      // share sheet (still works even where file-sharing isn't supported).
+      if (typeof navigator !== "undefined" && navigator.share) {
+        await navigator.share({
+          title: shareTitle,
+          text: result.itinerary,
+        });
+        return;
+      }
+
+      // Desktop / unsupported browsers have no share sheet at all, so just
+      // copy the itinerary to the clipboard.
+      if (typeof navigator !== "undefined" && navigator.clipboard) {
+        await navigator.clipboard.writeText(result.itinerary);
+        setShareMessage(
+          "Copied! On your phone's browser, tap this button instead to send it directly."
+        );
+      } else {
+        setShareMessage(
+          "Sharing isn't supported in this browser — use Download PDF instead."
+        );
+      }
+    } catch (err) {
+      // The user closing the share sheet counts as an "AbortError" — not a
+      // real failure, so stay quiet about it.
+      if (err?.name !== "AbortError") {
+        console.error("Share failed:", err);
+        setShareMessage(
+          "Couldn't share automatically — use Download PDF instead and send that file yourself."
+        );
+      }
+    }
   }
 
   return (
@@ -689,13 +756,18 @@ export default function Home() {
                     <input
                       type="range"
                       min={1}
-                      max={30}
+                      max={60}
                       value={durationDays}
                       onChange={(e) =>
                         setDurationDays(Number(e.target.value))
                       }
                       className="slider"
                     />
+                    <div className="hint">
+                      {durationDays > 30
+                        ? "Long trip! For 30+ days we'll group the plan week-by-week instead of listing every single day, so it stays readable."
+                        : "Drag to match how long the trip is (up to 60 days)."}
+                    </div>
                   </div>
 
                   {/* Notes */}
@@ -755,12 +827,23 @@ export default function Home() {
 
                 {result?.itinerary && (
                   <div className="itinerary-footer">
-                    <button
-                      onClick={downloadAsPdf}
-                      className="primary-btn primary-btn--small"
-                    >
-                      Download itinerary (PDF)
-                    </button>
+                    <div className="itinerary-footer-buttons">
+                      <button
+                        onClick={shareItinerary}
+                        className="secondary-btn primary-btn--small"
+                      >
+                        Share to phone
+                      </button>
+                      <button
+                        onClick={downloadAsPdf}
+                        className="primary-btn primary-btn--small"
+                      >
+                        Download itinerary (PDF)
+                      </button>
+                    </div>
+                    {shareMessage && (
+                      <p className="hint share-hint">{shareMessage}</p>
+                    )}
                   </div>
                 )}
               </section>
@@ -1286,6 +1369,22 @@ export default function Home() {
           font-size: 13px;
         }
 
+        .secondary-btn {
+          padding: 12px 16px;
+          border-radius: 12px;
+          border: 1px solid #c7d2fe;
+          font-weight: 600;
+          font-size: 14px;
+          cursor: pointer;
+          background-color: #eef2ff;
+          color: #4338ca;
+          transition: background 0.15s ease;
+        }
+
+        .secondary-btn:hover {
+          background-color: #e0e7ff;
+        }
+
         .itinerary-header {
           display: flex;
           justify-content: space-between;
@@ -1318,8 +1417,18 @@ export default function Home() {
           margin-top: 14px;
           padding-top: 10px;
           border-top: 1px solid #e2e8f0;
+        }
+
+        .itinerary-footer-buttons {
           display: flex;
           justify-content: flex-end;
+          gap: 10px;
+          flex-wrap: wrap;
+        }
+
+        .share-hint {
+          margin-top: 8px;
+          text-align: right;
         }
 
         /* Footer */
