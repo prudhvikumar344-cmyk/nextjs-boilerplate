@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Head from "next/head";
 import jsPDF from "jspdf";
 // Imported (not referenced via a "/..." public URL) so it works regardless
@@ -21,6 +21,59 @@ function budgetLabelFor(level) {
   if (level < 2000) return "low";
   if (level < 8000) return "medium";
   return "high";
+}
+
+// Rough per-currency slider ranges. These multipliers are NOT live exchange
+// rates — they're static approximations so the slider's max feels right for
+// a genuinely high-budget international trip, whatever currency the
+// traveler is thinking in. (100,000 INR is only ~1,100 USD — nowhere near
+// enough for an international trip — while 100,000 USD very much is, which
+// was the mismatch a traveler ran into.)
+const currencyBudgetConfig = {
+  USD: { max: 100000, step: 500 },
+  EUR: { max: 100000, step: 500 },
+  GBP: { max: 90000, step: 500 },
+  INR: { max: 10000000, step: 5000 }, // up to 1 crore
+  JPY: { max: 15000000, step: 5000 },
+  AUD: { max: 150000, step: 500 },
+  CAD: { max: 140000, step: 500 },
+  CNY: { max: 700000, step: 1000 },
+  SGD: { max: 140000, step: 500 },
+  AED: { max: 400000, step: 1000 },
+  CHF: { max: 100000, step: 500 },
+  MXN: { max: 1800000, step: 5000 },
+  BRL: { max: 500000, step: 1000 },
+  ZAR: { max: 1800000, step: 5000 },
+};
+function getBudgetConfig(currencyCode) {
+  return currencyBudgetConfig[currencyCode] || currencyBudgetConfig.USD;
+}
+
+// India's own numbering system (lakh = 100,000, crore = 10,000,000) is what
+// travelers budgeting in INR actually think in, so we show it alongside the
+// raw number. Everything else gets the more universal K/M shorthand once
+// the number gets large enough that the raw digits are hard to scan.
+function formatBudgetAbbrev(value, currencyCode) {
+  if (currencyCode === "INR") {
+    if (value >= 10000000) {
+      const cr = value / 10000000;
+      return `${cr % 1 === 0 ? cr : cr.toFixed(2)} Cr`;
+    }
+    if (value >= 100000) {
+      const l = value / 100000;
+      return `${l % 1 === 0 ? l : l.toFixed(2)} L`;
+    }
+    return null;
+  }
+  if (value >= 1000000) {
+    const m = value / 1000000;
+    return `${m % 1 === 0 ? m : m.toFixed(2)}M`;
+  }
+  if (value >= 1000) {
+    const k = value / 1000;
+    return `${k % 1 === 0 ? k : k.toFixed(1)}K`;
+  }
+  return null;
 }
 
 // --- Small inline icons (no external icon library / network dependency) ---
@@ -71,6 +124,9 @@ export default function Home() {
 
   const [pace, setPace] = useState("normal");
   const [durationDays, setDurationDays] = useState(7);
+  // NEW – lets a traveler type an exact day count instead of being limited
+  // to what the slider can represent (a trip could be 90, 120... days).
+  const [useCustomDuration, setUseCustomDuration] = useState(false);
 
   const [interests, setInterests] = useState([]); // optional
   const [tripType, setTripType] = useState([]); // NEW – family, friends, kids, etc.
@@ -136,6 +192,22 @@ export default function Home() {
     { value: "BRL", label: "BRL – Brazilian Real" },
     { value: "ZAR", label: "ZAR – South African Rand" },
   ];
+
+  // The currency actually driving the budget slider right now, and the
+  // range/formatting that goes with it.
+  const activeCurrency = useUSD ? "USD" : currency;
+  const budgetConfig = getBudgetConfig(activeCurrency);
+  const budgetAbbrev = formatBudgetAbbrev(budgetLevel, activeCurrency);
+
+  // If the traveler switches currency (e.g. from INR's much bigger range
+  // down to USD's smaller one), make sure the slider value can't get stuck
+  // above the new max.
+  useEffect(() => {
+    if (budgetLevel > budgetConfig.max) {
+      setBudgetLevel(budgetConfig.max);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeCurrency]);
 
   // Toggle a single interest on/off
   const toggleInterest = (value) => {
@@ -698,26 +770,39 @@ export default function Home() {
                     </div>
                   </div>
 
-                  {/* Budget slider – up to 100k */}
+                  {/* Budget slider – range depends on the chosen currency */}
                   <div className="field">
                     <div className="field-label-row">
                       <span>Budget level (all inclusive)</span>
                       <span className="muted">
                         Approx: {useUSD ? "$" : currency + " "}
-                        {budgetLevel.toLocaleString()}
+                        {budgetLevel.toLocaleString(
+                          activeCurrency === "INR" ? "en-IN" : "en-US"
+                        )}
+                        {budgetAbbrev ? ` (${budgetAbbrev})` : ""}
                       </span>
                     </div>
                     <input
                       type="range"
                       min={500}
-                      max={100000}
-                      step={500}
+                      max={budgetConfig.max}
+                      step={budgetConfig.step}
                       value={budgetLevel}
                       onChange={(e) => setBudgetLevel(Number(e.target.value))}
                       className="slider"
                     />
                     <div className="hint">
-                      Drag to match your rough total budget (up to 100,000).
+                      Drag to match your rough total budget (up to{" "}
+                      {budgetConfig.max.toLocaleString(
+                        activeCurrency === "INR" ? "en-IN" : "en-US"
+                      )}
+                      {formatBudgetAbbrev(budgetConfig.max, activeCurrency)
+                        ? ` / ${formatBudgetAbbrev(
+                            budgetConfig.max,
+                            activeCurrency
+                          )}`
+                        : ""}
+                      ).
                     </div>
 
                     {/* NEW – local currency + "use USD instead" checkbox */}
@@ -745,7 +830,8 @@ export default function Home() {
                     </div>
                   </div>
 
-                  {/* Duration slider */}
+                  {/* Duration slider, with a fallback for trips longer
+                      than the slider can comfortably represent */}
                   <div className="field">
                     <div className="field-label-row">
                       <span>Duration</span>
@@ -753,21 +839,60 @@ export default function Home() {
                         {durationDays} {durationDays === 1 ? "day" : "days"}
                       </span>
                     </div>
-                    <input
-                      type="range"
-                      min={1}
-                      max={60}
-                      value={durationDays}
-                      onChange={(e) =>
-                        setDurationDays(Number(e.target.value))
-                      }
-                      className="slider"
-                    />
+
+                    {!useCustomDuration && (
+                      <input
+                        type="range"
+                        min={1}
+                        max={60}
+                        value={durationDays}
+                        onChange={(e) =>
+                          setDurationDays(Number(e.target.value))
+                        }
+                        className="slider"
+                      />
+                    )}
+
+                    {useCustomDuration && (
+                      <input
+                        type="number"
+                        min={1}
+                        max={365}
+                        value={durationDays}
+                        onChange={(e) => {
+                          const raw = Number(e.target.value) || 1;
+                          setDurationDays(
+                            Math.min(Math.max(raw, 1), 365)
+                          );
+                        }}
+                        placeholder="Enter number of days"
+                        className="input custom-duration-input"
+                      />
+                    )}
+
                     <div className="hint">
                       {durationDays > 30
                         ? "Long trip! For 30+ days we'll group the plan week-by-week instead of listing every single day, so it stays readable."
-                        : "Drag to match how long the trip is (up to 60 days)."}
+                        : "Drag to match how long the trip is."}
                     </div>
+
+                    <label className="checkbox-row custom-duration-toggle">
+                      <input
+                        type="checkbox"
+                        checked={useCustomDuration}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          setUseCustomDuration(checked);
+                          if (checked && durationDays < 60) {
+                            setDurationDays(60);
+                          }
+                        }}
+                      />
+                      <span>
+                        Trip is longer than 60 days — let me type the exact
+                        number
+                      </span>
+                    </label>
                   </div>
 
                   {/* Notes */}
@@ -1328,6 +1453,14 @@ export default function Home() {
 
         .checkbox-row input {
           accent-color: #4f46e5;
+        }
+
+        .custom-duration-input {
+          width: 140px;
+        }
+
+        .custom-duration-toggle {
+          margin-top: 10px;
         }
 
         .error-box {
