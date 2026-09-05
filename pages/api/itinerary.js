@@ -70,12 +70,12 @@ export default async function handler(req, res) {
 
     // Defense in depth: the UI already caps these, but a direct API
     // call could send anything, so clamp/limit server-side too. The UI's
-    // slider goes up to 60 days (long backpacking-style trips); beyond
-    // that a single day-by-day itinerary stops being a useful format
-    // (and starts risking truncation against max_tokens below).
+    // slider goes up to 60 days, with a custom-entry fallback for longer
+    // trips (long backpacking/relocation-style trips), so allow well
+    // beyond that here too; 365 is just a sanity ceiling.
     const safeDurationDays = Math.min(
       Math.max(Number(durationDays) || 1, 1),
-      60
+      365
     );
     // Long trips get a week-by-week structure instead of a full day-by-day
     // breakdown, both so the plan stays readable and so it reliably fits
