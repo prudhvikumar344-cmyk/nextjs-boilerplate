@@ -69,11 +69,18 @@ export default async function handler(req, res) {
     }
 
     // Defense in depth: the UI already caps these, but a direct API
-    // call could send anything, so clamp/limit server-side too.
+    // call could send anything, so clamp/limit server-side too. The UI's
+    // slider goes up to 60 days (long backpacking-style trips); beyond
+    // that a single day-by-day itinerary stops being a useful format
+    // (and starts risking truncation against max_tokens below).
     const safeDurationDays = Math.min(
       Math.max(Number(durationDays) || 1, 1),
-      30
+      60
     );
+    // Long trips get a week-by-week structure instead of a full day-by-day
+    // breakdown, both so the plan stays readable and so it reliably fits
+    // inside max_tokens.
+    const isLongTrip = safeDurationDays > 30;
     const safeNotes =
       typeof notes === "string" ? notes.slice(0, 2000) : "";
     const safeOrigin =
@@ -141,7 +148,11 @@ ${safeNotes || "No extra notes provided."}
 
 Formatting requirements:
 - Use plain text (no markdown symbols like **, bullets with hyphens only if needed).
-- Use concise paragraphs and Day 1 / Day 2 / ... headings.
+${
+  isLongTrip
+    ? `- This is a long trip (${safeDurationDays} days), so do NOT write one heading per day — that would be too long to be useful. Instead, structure it as "Week 1", "Week 2", etc., each with a short paragraph covering the theme/region for that week, 3-5 concrete highlights (specific places, activities, or day trips), and a rough cost range. Call out any single days worth planning in detail (e.g. an arrival day, a special excursion).`
+    : `- Use concise paragraphs and Day 1 / Day 2 / ... headings.`
+}
 - Avoid more than one blank line between paragraphs.
 - All money amounts should be in ${safeCurrency}, clearly labeled — do not silently convert to a different currency.
 - Make it look clean and easy to read.
@@ -156,7 +167,10 @@ Formatting requirements:
       },
       body: JSON.stringify({
         model: "claude-sonnet-5",
-        max_tokens: 4096,
+        // Long (30+ day) trips need more room even with the week-grouped
+        // format above, so give those requests a bigger budget. Shorter
+        // trips keep the original, cheaper limit.
+        max_tokens: isLongTrip ? 8192 : 4096,
         // NOTE: `temperature` is intentionally omitted — Claude Sonnet 5
         // deprecated this parameter and rejects requests that include it
         // with a 400 error ("`temperature` is deprecated for this model").
