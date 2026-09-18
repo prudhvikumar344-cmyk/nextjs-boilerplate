@@ -25,6 +25,7 @@ function formatDate(dateStr) {
     year: "numeric",
     month: "long",
     day: "numeric",
+    timeZone: "UTC",
   });
 }
 
@@ -223,6 +224,23 @@ export default function BlogPost({ post }) {
           padding: 2px 6px;
           border-radius: 4px;
           font-size: 0.9em;
+        }
+
+        .post__content pre {
+          background: #0f172a;
+          color: #e2e8f0;
+          padding: 16px 18px;
+          border-radius: 10px;
+          overflow-x: auto;
+          margin: 0 0 20px;
+        }
+
+        .post__content pre code {
+          background: none;
+          padding: 0;
+          color: inherit;
+          font-size: 0.9em;
+          line-height: 1.6;
         }
 
         .post__content hr {
