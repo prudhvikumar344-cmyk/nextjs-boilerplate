@@ -31,4 +31,4 @@ Here's the part most visitors don't know: the Eiffel Tower's original building p
 
 ## Visiting today
 
-More than 130 years after that "temporary" World's Fair exhibit went up, the tower is still standing, still repainted every seven years, and still the first thing most people want to see when they land in Paris. If you're planning a trip, mornings and late evenings tend to have shorter lines than midday, and the view from the second floor is, for most visitors, worth more than the xtra time and cost of going all the way to the top.
+More than 130 years after that "temporary" World's Fair exhibit went up, the tower is still standing, still repainted every seven years, and still the first thing most people want to see when they land in Paris. If you're planning a trip, mornings and late evenings tend to have shorter lines than midday, and the view from the second floor is, for most visitors, worth more than the extra time and cost of going all the way to the top.
