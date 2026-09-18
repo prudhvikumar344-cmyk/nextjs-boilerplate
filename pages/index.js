@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import Head from "next/head";
+import Link from "next/link";
 import jsPDF from "jspdf";
 // Imported (not referenced via a "/..." public URL) so it works regardless
 // of the static assets folder's exact casing on disk.
@@ -478,6 +479,9 @@ export default function Home() {
             <a href="#how-it-works" className="site-nav__link">
               How it works
             </a>
+            <Link href="/blog" className="site-nav__link">
+              Blog
+            </Link>
             <a href="#planner" className="site-nav__cta">
               Plan my trip
             </a>
