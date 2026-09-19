@@ -106,16 +106,6 @@ export default function BlogIndex({ posts }) {
               href={`/blog/${post.slug}`}
               className="post-card"
             >
-              {post.coverImage ? (
-                <img
-                  src={post.coverImage}
-                  alt=""
-                  className="post-card__image"
-                  loading="lazy"
-                />
-              ) : (
-                <div className="post-card__image post-card__image--placeholder" />
-              )}
               <div className="post-card__body">
                 <h2 className="post-card__title">{post.title}</h2>
                 {post.excerpt && (
@@ -289,33 +279,19 @@ export default function BlogIndex({ posts }) {
         }
 
         .post-card {
-          display: flex;
-          gap: 20px;
+          display: block;
           text-decoration: none;
           color: inherit;
           background: #ffffff;
           border: 1px solid #e2e8f0;
           border-radius: 16px;
-          padding: 16px;
+          padding: 20px;
           transition: border-color 0.15s ease, box-shadow 0.15s ease;
         }
 
         .post-card:hover {
           border-color: #c7d2fe;
           box-shadow: 0 4px 16px rgba(79, 70, 229, 0.08);
-        }
-
-        .post-card__image {
-          width: 160px;
-          height: 110px;
-          flex-shrink: 0;
-          border-radius: 10px;
-          object-fit: cover;
-          background: #eef2ff;
-        }
-
-        .post-card__image--placeholder {
-          background: linear-gradient(135deg, #eef2ff, #e0e7ff);
         }
 
         .post-card__body {
@@ -384,15 +360,6 @@ export default function BlogIndex({ posts }) {
         }
 
         @media (max-width: 640px) {
-          .post-card {
-            flex-direction: column;
-          }
-
-          .post-card__image {
-            width: 100%;
-            height: 160px;
-          }
-
           .blog-hero__title {
             font-size: 28px;
           }
