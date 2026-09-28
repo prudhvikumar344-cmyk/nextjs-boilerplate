@@ -1,3 +1,5 @@
+import { getSessionUser } from '../../../lib/auth';
+
 export const config = {
   api: {
     bodyParser: {
@@ -40,19 +42,20 @@ export default async function handler(req, res) {
     return;
   }
 
-  if (!process.env.ADMIN_PASSWORD || !process.env.GITHUB_TOKEN || !process.env.GITHUB_OWNER || !process.env.GITHUB_REPO) {
+  if (!process.env.SESSION_SECRET || !process.env.GITHUB_TOKEN || !process.env.GITHUB_OWNER || !process.env.GITHUB_REPO) {
     res.status(500).json({
-      error: 'Admin publishing is not configured yet. Set ADMIN_PASSWORD, GITHUB_TOKEN, GITHUB_OWNER and GITHUB_REPO in your Vercel project settings.',
+      error: 'Admin publishing is not configured yet. Set BLOG_AUTHORS, SESSION_SECRET, GITHUB_TOKEN, GITHUB_OWNER and GITHUB_REPO in your Vercel project settings.',
     });
     return;
   }
 
-  const { password, title, excerpt, date, body, images } = req.body || {};
-
-  if (password !== process.env.ADMIN_PASSWORD) {
-    res.status(401).json({ error: 'Wrong password.' });
+  const username = getSessionUser(req);
+  if (!username) {
+    res.status(401).json({ error: 'You need to log in again.' });
     return;
   }
+
+  const { title, excerpt, date, body, images } = req.body || {};
 
   if (!title || !title.trim() || !body || !body.trim()) {
     res.status(400).json({ error: 'Title and post text are required.' });
@@ -67,14 +70,14 @@ export default async function handler(req, res) {
 
   const branch = process.env.GITHUB_BRANCH || 'main';
   const postDate = date || new Date().toISOString().slice(0, 10);
-  const frontmatter = `---\ntitle: "${escapeYaml(title.trim())}"\ndate: ${postDate}\nexcerpt: "${escapeYaml(excerpt ? excerpt.trim() : '')}"\n---\n\n`;
+  const frontmatter = `---\ntitle: "${escapeYaml(title.trim())}"\ndate: ${postDate}\nexcerpt: "${escapeYaml(excerpt ? excerpt.trim() : '')}"\nauthor: "${escapeYaml(username)}"\n---\n\n`;
   const markdown = frontmatter + body.trim() + '\n';
 
   const postPath = `content/blog/${slug}.md`;
   const postRes = await githubRequest(postPath, {
     method: 'PUT',
     body: JSON.stringify({
-      message: `Add blog post: ${title.trim()}`,
+      message: `Add blog post: ${title.trim()} (by ${username})`,
       content: Buffer.from(markdown, 'utf-8').toString('base64'),
       branch,
     }),
@@ -100,7 +103,7 @@ export default async function handler(req, res) {
     const imgRes = await githubRequest(imgPath, {
       method: 'PUT',
       body: JSON.stringify({
-        message: `Add image for ${title.trim()}: ${safeName}`,
+        message: `Add image for ${title.trim()}: ${safeName} (by ${username})`,
         content: base64,
         branch,
       }),
