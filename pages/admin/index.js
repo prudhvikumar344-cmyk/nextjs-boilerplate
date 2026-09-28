@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import Head from 'next/head';
+import { getSessionUser } from '../../lib/auth';
 
 function slugify(str) {
   return str
@@ -11,8 +12,15 @@ function slugify(str) {
     .replace(/^-|-$/g, '');
 }
 
-export default function AdminPage() {
-  const [password, setPassword] = useState('');
+export async function getServerSideProps({ req }) {
+  const username = getSessionUser(req);
+  if (!username) {
+    return { redirect: { destination: '/admin/login', permanent: false } };
+  }
+  return { props: { username } };
+}
+
+export default function AdminPage({ username }) {
   const [title, setTitle] = useState('');
   const [excerpt, setExcerpt] = useState('');
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
@@ -57,13 +65,14 @@ export default function AdminPage() {
     setImages((prev) => prev.filter((img) => img.filename !== filename));
   }
 
+  async function handleLogout() {
+    await fetch('/api/admin/logout', { method: 'POST' });
+    window.location.href = '/admin/login';
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     setStatus(null);
-    if (!password) {
-      setStatus({ type: 'error', message: 'Enter the admin password.' });
-      return;
-    }
     if (!title.trim() || !body.trim()) {
       setStatus({ type: 'error', message: 'Title and body are required.' });
       return;
@@ -74,7 +83,6 @@ export default function AdminPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          password,
           title,
           excerpt,
           date,
@@ -106,14 +114,17 @@ export default function AdminPage() {
         <meta name="robots" content="noindex,nofollow" />
       </Head>
       <div className="wrap">
-        <h1>Write a new blog post</h1>
-        <p className="hint">This saves straight into your GitHub repo. Vercel rebuilds automatically after you publish.</p>
+        <div className="topRow">
+          <div>
+            <h1>Write a new blog post</h1>
+            <p className="hint">This saves straight into your GitHub repo. Vercel rebuilds automatically after you publish.</p>
+          </div>
+          <div className="account">
+            <span>Logged in as <strong>{username}</strong></span>
+            <button type="button" onClick={handleLogout}>Log out</button>
+          </div>
+        </div>
         <form onSubmit={handleSubmit}>
-          <label>
-            Admin password
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" />
-          </label>
-
           <label>
             Title
             <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. A Weekend in Goa" />
@@ -163,11 +174,14 @@ export default function AdminPage() {
       </div>
       <style jsx>{`
         .wrap { max-width: 760px; margin: 0 auto; padding: 40px 20px 80px; font-family: -apple-system, Inter, sans-serif; color: #1f2937; }
+        .topRow { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
         h1 { font-size: 28px; margin-bottom: 4px; }
         .hint { color: #6b7280; margin-bottom: 24px; font-size: 14px; }
+        .account { display: flex; align-items: center; gap: 10px; font-size: 14px; color: #374151; }
+        .account button { font-size: 13px; padding: 6px 12px; border-radius: 6px; border: 1px solid #d1d5db; background: white; cursor: pointer; }
         form { display: flex; flex-direction: column; gap: 18px; }
         label { display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600; color: #374151; }
-        input[type="text"], input[type="password"], input[type="date"], textarea {
+        input[type="text"], input[type="date"], textarea {
           font: inherit; font-weight: 400; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; resize: vertical;
         }
         input:focus, textarea:focus { outline: none; border-color: #4f46e5; box-shadow: 0 0 0 3px rgba(79,70,229,0.15); }
